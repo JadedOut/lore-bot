@@ -86,7 +86,7 @@ func main() {
 	//Load the .env file
 	err := godotenv.Load(".env")
 	if err != nil {
-		log.Fatal("error: failed to load the env file")
+		log.Println("warning: failed to load the env file")
 	}
 
 	if os.Getenv("ENV") == "PRODUCTION" {
