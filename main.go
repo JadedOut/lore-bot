@@ -155,6 +155,9 @@ func main() {
 	})
 
 	port := os.Getenv("PORT")
+	if port == "" {
+		port = "9000"
+	}
 
 	log.Printf("\n\n PORT: %s \n ENV: %s \n SSL: %s \n Version: %s \n\n", port, os.Getenv("ENV"), os.Getenv("SSL"), os.Getenv("API_VERSION"))
 
