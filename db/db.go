@@ -33,6 +33,8 @@ func Init() {
 	}
 
 	log.Println("db connection success")
+
+	TestPgVector()
 }
 
 // ConnectDB ...
@@ -54,6 +56,55 @@ func ConnectDB(dataSourceName string) (*gorp.DbMap, error) {
 // GetDB ...
 func GetDB() *gorp.DbMap {
 	return db
+}
+
+// Pgvector tests
+func TestPgVector() {
+	log.Println("------------------------testing pgvector------------------------------")
+
+	_, err := db.Db.Exec("CREATE EXTENSION IF NOT EXISTS vector")
+	if err != nil {
+		log.Printf("Warning: pgvector error: %v ", err)
+	}
+
+	queries := []string{
+		"DROP TABLE IF EXISTS test_items",
+		"CREATE TABLE test_items (id bigserial PRIMARY KEY, embedding vector(3))",
+		"INSERT INTO test_items (embedding) VALUES ('[1,2,3]'), ('[4,5,6]')",
+	}
+
+	for _, query := range queries {
+		_, err := db.Db.Exec(query)
+		if err != nil {
+			log.Printf("Warning: execute query error: %v", err)
+		}
+	}
+
+	// Similarity search
+	rows, err := db.Db.Query("SELECT id, embedding FROM test_items ORDER BY embedding <-> '[3,1,2]' LIMIT 5")
+	if err != nil {
+		log.Printf("Warning: similarity search error: %v", err)
+		return
+	}
+	defer rows.Close()
+
+	log.Println("Similarity search results:")
+
+	for rows.Next() {
+		var id int
+		var embedding string
+		if err := rows.Scan(&id, &embedding); err != nil {
+			log.Printf("Error scanning row: %v", err)
+			continue
+		}
+		log.Printf("  ID: %d, Embedding: %s", id, embedding)
+	}
+
+	// Clean test table
+	_, err = db.Db.Exec("DROP TABLE test_items")
+	if err != nil {
+		log.Printf("Warning: clean test table error: %v", err)
+	}
 }
 
 // RedisClient ...

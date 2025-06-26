@@ -134,6 +134,44 @@ func main() {
 		v1.GET("/article/:id", TokenAuthMiddleware(), article.One)
 		v1.PUT("/article/:id", TokenAuthMiddleware(), article.Update)
 		v1.DELETE("/article/:id", TokenAuthMiddleware(), article.Delete)
+
+		v1.GET("/test/db", func(c *gin.Context) {
+			// Test DB connection
+			err := db.GetDB().Db.Ping()
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Database connection failed", "details": err.Error()})
+				return
+			}
+
+			// Simple query
+			var count int
+			err = db.GetDB().Db.QueryRow("SELECT COUNT(*) FROM pg_extension WHERE extname = 'vector'").Scan(&count)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Failed to check vector extension", "details": err.Error()})
+				return
+			}
+
+			vectorEnabled := count > 0
+
+			// Test Redis if available
+			redisStatus := "not configured"
+			if db.GetRedis() != nil {
+				_, err := db.GetRedis().Ping().Result()
+				if err != nil {
+					redisStatus = "connection failed"
+				} else {
+					redisStatus = "connected"
+				}
+			}
+
+			c.JSON(200, gin.H{
+				"database": "connected",
+				"pgvector": vectorEnabled,
+				"redis":    redisStatus,
+				"message":  "Backend infrastructure ready!",
+			})
+		})
+
 	}
 
 	// Swagger docs
